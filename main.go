@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -78,15 +79,21 @@ func flattenDirectory(root string) error {
 
 		// If the file would conflict with an existing file, create a new name
 		if _, err := os.Stat(targetPath); err == nil || usedNames[fileName] {
-			// Create a unique name by using the directory structure
-			ext := filepath.Ext(fileName)
-			baseName := fileName[:len(fileName)-len(ext)]
+			// If the file is directly in the first level subdirectory, keep the original name
+			if filepath.Dir(relPath) == "." {
+				// This is a first-level file, keep original name but mark as used
+				usedNames[fileName] = true
+			} else {
+				// Create a unique name by using the directory structure
+				ext := filepath.Ext(fileName)
+				baseName := fileName[:len(fileName)-len(ext)]
 
-			parentDir := filepath.Base(filepath.Dir(relPath))
-			newFileName := fmt.Sprintf("%s_%s%s", baseName, parentDir, ext)
+				parentDir := filepath.Base(filepath.Dir(relPath))
+				newFileName := fmt.Sprintf("%s_%s%s", baseName, parentDir, ext)
 
-			targetPath = filepath.Join(root, newFileName)
-			usedNames[newFileName] = true
+				targetPath = filepath.Join(root, newFileName)
+				usedNames[newFileName] = true
+			}
 		} else {
 			usedNames[fileName] = true
 		}
