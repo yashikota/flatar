@@ -31,6 +31,15 @@ Process a specific directory
 flatar /path/to/directory
 ```
 
+### Command-line Options
+
+```bash
+flatar [-a] [-d] [<root_directory>]
+```
+
+- `-a`: Create tar archive after flattening
+- `-d`: Delete original directory after processing
+
 ### Example
 
 Given a directory structure
