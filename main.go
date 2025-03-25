@@ -166,11 +166,22 @@ func createArchive(sourceDir, outputFile string) error {
 }
 
 func main() {
+	// Define command line flags
+	createArchiveFlag := flag.Bool("a", false, "Create tar archive after flattening")
+	deleteDirFlag := flag.Bool("d", false, "Delete original directory after processing")
+
+	// Parse flags
+	flag.Parse()
+
+	// Get the root directory from remaining arguments
+	args := flag.Args()
 	rootDir := "."
-	if len(os.Args) == 2 {
-		rootDir = os.Args[1]
-	} else if len(os.Args) > 2 {
-		fmt.Println("Usage: flatar <root_directory>")
+	if len(args) == 1 {
+		rootDir = args[0]
+	} else if len(args) > 1 {
+		fmt.Println("Usage: flatar [-a] [-d] [<root_directory>]")
+		fmt.Println("  -a    Create tar archive after flattening")
+		fmt.Println("  -d    Delete original directory after processing")
 		return
 	}
 
@@ -204,10 +215,21 @@ func main() {
 			continue
 		}
 
-		tarFile := dirPath + ".tar"
-		if err := createArchive(dirPath, tarFile); err != nil {
-			fmt.Println("Failed to create archive:", err)
-			continue
+		// Create tar archive if -a flag is set
+		if *createArchiveFlag {
+			tarFile := dirPath + ".tar"
+			if err := createArchive(dirPath, tarFile); err != nil {
+				fmt.Println("Failed to create archive:", err)
+				continue
+			}
+		}
+
+		// Delete the directory if -d flag is set
+		if *deleteDirFlag {
+			if err := os.RemoveAll(dirPath); err != nil {
+				fmt.Println("Failed to remove directory:", err)
+				continue
+			}
 		}
 	}
 	fmt.Println("All tasks completed!")
