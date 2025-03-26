@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"flag"
 	"fmt"
 	"io"
@@ -172,9 +173,59 @@ func createArchive(sourceDir, outputFile string) error {
 	})
 }
 
+func createZipArchive(sourceDir, outputFile string) error {
+	zipFile, err := os.Create(outputFile)
+	if err != nil {
+		return err
+	}
+	defer zipFile.Close()
+
+	zw := zip.NewWriter(zipFile)
+	defer zw.Close()
+
+	return filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(sourceDir, path)
+		if err != nil {
+			return err
+		}
+
+		// Create a new file header
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+		header.Name = relPath
+		header.Method = zip.Deflate
+
+		// Create writer for the file
+		writer, err := zw.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		// Open and copy file contents
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		_, err = io.Copy(writer, file)
+		return err
+	})
+}
+
 func main() {
 	// Define command line flags
-	createArchiveFlag := flag.Bool("a", false, "Create tar archive after flattening")
+	createTarFlag := flag.Bool("a", false, "Create tar archive after flattening")
+	createZipFlag := flag.Bool("z", false, "Create zip archive after flattening")
 	deleteDirFlag := flag.Bool("d", false, "Delete original directory after processing")
 
 	// Parse flags
@@ -186,8 +237,9 @@ func main() {
 	if len(args) == 1 {
 		rootDir = args[0]
 	} else if len(args) > 1 {
-		fmt.Println("Usage: flatar [-a] [-d] [<root_directory>]")
+		fmt.Println("Usage: flatar [-a] [-z] [-d] [<root_directory>]")
 		fmt.Println("  -a    Create tar archive after flattening")
+		fmt.Println("  -z    Create zip archive after flattening")
 		fmt.Println("  -d    Delete original directory after processing")
 		return
 	}
@@ -209,6 +261,19 @@ func main() {
 		return
 	}
 
+	// Check if there are any subdirectories to process
+	subdirCount := 0
+	for _, dir := range dirs {
+		if dir.IsDir() {
+			subdirCount++
+		}
+	}
+
+	if subdirCount == 0 {
+		fmt.Printf("No subdirectories found in '%s'. Nothing to process.\n", rootDir)
+		return
+	}
+
 	for _, dir := range dirs {
 		if !dir.IsDir() {
 			continue
@@ -223,12 +288,23 @@ func main() {
 		}
 
 		// Create tar archive if -a flag is set
-		if *createArchiveFlag {
+		if *createTarFlag {
 			tarFile := dirPath + ".tar"
 			if err := createArchive(dirPath, tarFile); err != nil {
-				fmt.Println("Failed to create archive:", err)
+				fmt.Println("Failed to create tar archive:", err)
 				continue
 			}
+			fmt.Println("Created tar archive:", tarFile)
+		}
+
+		// Create zip archive if -z flag is set
+		if *createZipFlag {
+			zipFile := dirPath + ".zip"
+			if err := createZipArchive(dirPath, zipFile); err != nil {
+				fmt.Println("Failed to create zip archive:", err)
+				continue
+			}
+			fmt.Println("Created zip archive:", zipFile)
 		}
 
 		// Delete the directory if -d flag is set

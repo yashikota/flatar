@@ -5,7 +5,7 @@
 ## Features
 
 - Flatten nested directory structures
-- Create tar archives for flattened directories
+- Create tar or zip archives for flattened directories
 - Flexible directory processing
 - Handles naming conflicts when moving files
 
@@ -34,11 +34,20 @@ flatar /path/to/directory
 ### Command-line Options
 
 ```bash
-flatar [-a] [-d] [<root_directory>]
+flatar [-a] [-z] [-d] [<root_directory>]
 ```
 
 - `-a`: Create tar archive after flattening
+- `-z`: Create zip archive after flattening
 - `-d`: Delete original directory after processing
+
+### Error Handling
+
+The tool provides informative messages in the following cases
+
+- When the specified directory does not exist
+- When the specified path is not a directory
+- When no subdirectories are found to process
 
 ### Example
 
